@@ -1,6 +1,7 @@
 package huffmancode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,10 +44,19 @@ public class HuffmanCode {
 	byte[] contentBytes=content.getBytes();
 	System.out.println(contentBytes.length);//40
 	
+	byte[] huffmanCodeBytes=huffmanZip(contentBytes);
+	System.out.println("压缩后的结果："+Arrays.toString(huffmanCodeBytes)+" 长度= "+huffmanCodeBytes.length);
+	
+	//如何将数据进行解压（解码）
+	
+	//分布过程
+	
+	/*
+	
 	List<Node> nodes=getNodes(contentBytes);
 	System.out.println("nodes="+nodes);
 	
-	//测试一把创建的二叉树
+	//测试一把创建的赫夫曼树
 	System.out.println("赫夫曼树");
 	Node huffmanTreeRoot=createHuffmanTree(nodes);
 	System.out.println("前序遍历");
@@ -56,6 +66,88 @@ public class HuffmanCode {
 	Map<Byte, String> huffmanCodes=getCodes(huffmanTreeRoot);
 	
 	System.out.println("生成的赫夫曼编码表="+huffmanCodes);
+	
+	//测试
+	byte[] huffmanCodeBytes=zip(contentBytes, huffmanCodes);
+	System.out.println("huffmanCodeBytes="+Arrays.toString(huffmanCodeBytes));
+	
+	//发送huffmanCodeBytes数组
+	 
+	*/
+    }
+    
+    //使用一个方法，将前面的方法封装起来，便于我们的调用
+    /**
+     * 
+     * @param bytes 原始的字符串对应的字节数组
+     * @return 是经过赫夫曼编码处理后的字节数组（压缩后的数组）
+     */
+    private static byte[] huffmanZip(byte[] bytes) {
+	List<Node> nodes=getNodes(bytes);
+	
+	//根据nodes创建的赫夫曼树
+	Node huffmanTreeRoot=createHuffmanTree(nodes);
+	
+	//对应的赫夫曼编码（根据赫夫曼树）
+	Map<Byte, String> huffmanCodes=getCodes(huffmanTreeRoot);
+	
+	//根据生成的赫夫曼编码，压缩后的赫夫曼编码字节数组
+	byte[] huffmanCodeBytes=zip(bytes, huffmanCodes);
+	
+	return huffmanCodeBytes;
+    }
+    
+    //编写一个方法，将字符串对应的byte[]数组，通过生成的赫夫曼编码表，返回一个赫夫曼编码压缩后的byte[]
+    /**
+     * 
+     * @param bytes 这是原始的字符串对应的byte[]
+     * @param huffmanCodes 生成的赫夫曼编码map
+     * @return 返回赫夫曼编码处理后的byte[]
+     * 举例：String content="i like like like java do you like a java";=>byte[] contentBytes=content.getBytes();
+     * 返回的是字符串对应的二进制序列=>对应的byte[] huffmanCodeBytes，即8位对应一个byte，放入到huffmanCodeBytes
+     * huffmanCodeBytes[0]=10101000（补码）=>byte[推导 10101000=>10101000-1=>10100111=>11011000=-88]
+     * huffmanCodeBytes[1]=-88
+     */
+    private static byte[] zip(byte[] bytes, Map<Byte, String> huffmanCodes) {
+	//1.利用huffmanCodes将bytes转成赫夫曼编码对应的字符串
+	StringBuilder stringBuilder=new StringBuilder();
+	
+	//遍历bytes数组
+	for (byte b : bytes) {
+	    stringBuilder.append(huffmanCodes.get(b));
+	}
+	
+	//System.out.println("测试 stringBuilder="+stringBuilder.toString());
+	
+	//将"10101000101111111100···"转成byte[]
+	//统计返回的byte[] huffmanCodeBytes 长度
+	//一句话int len=(stringBuilder+7)/8;
+	int len;
+	if (stringBuilder.length()%8==0) {
+	    len=stringBuilder.length()/8;
+	} else {
+	    len=stringBuilder.length()/8+1;
+	}
+	
+	//创建存储压缩后的byte[]
+	byte[] huffmanCodeBytes=new byte[len];
+	
+	int index=0;//记录是第几个byte
+	for (int i = 0; i < stringBuilder.length(); i+=8) {//因为是每8位对应一个byte，所以步长+8
+	    String strByte;
+	    
+	    if (i+8>stringBuilder.length()) {//不够8位
+		strByte=stringBuilder.substring(i);
+	    } else {
+		strByte=stringBuilder.substring(i, i+8);
+	    }
+	    
+	    //将strByte转成一个byte，放入到huffmanCodeBytes
+	    huffmanCodeBytes[index]=(byte)Integer.parseInt(strByte, 2);
+	    index++;
+	}
+	
+	return huffmanCodeBytes;
     }
     
     //生成赫夫曼树对应的赫夫曼编码
