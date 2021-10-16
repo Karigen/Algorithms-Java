@@ -1,5 +1,13 @@
 package huffmancode;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,11 +43,51 @@ import java.util.Map;
  * 3.编写一个方法，将准备构建赫夫曼树的Node节点放到List，形式[Node[data='a',weight=5], Node[data=' ',weight=9]······]体现各节点对应的权值
  * 4.可以通过List创建对应的赫夫曼树
  * 
+ * 数据压缩
+ * 1.生成赫夫曼树对应的赫夫曼编码
+ * 2.使用赫夫曼编码来生成赫夫曼编码数据，即按照上面的赫夫曼编码将字符串生成对应的01比特串
+ * 
+ * 数据解压--压缩的逆向过程
+ * 1.得到赫夫曼编码和对应的byte数组
+ * 2.用赫夫曼编码进行解压，得到原来的字符串
+ * 
+ * 文件压缩
+ * 1.读取文件
+ * 2.得到赫夫曼编码表
+ * 3.完成压缩
+ * 
+ * 文件压缩
+ * 1.如果文件本身就是经过压缩处理的，那么使用赫夫曼编码再压缩效率就不会有明显的变化，比如视频，ppt等等文件
+ * 2.赫夫曼编码是按字节来处理的，因此可以处理所有的二进制文件（二进制文本、文本文件）
+ * 3.如果一个文件中的内容，重复的数据不多，压缩效果也不会很明显
+ * 
+ * 读取压缩文件（数据和赫夫曼编码表）->完成解压（文件恢复）
  */
 
 public class HuffmanCode {
 
     public static void main(String[] args) {
+	
+	/*
+	
+	//测试压缩文件
+	String srcFile="d://src.bmp";
+	String dstFile="d://dst.zip";
+	
+	zipFile(srcFile, dstFile);
+	
+	System.out.println("压缩文件ok");
+	
+	*/
+	
+	//测试解压文件
+	String zipFile="d://dst.zip";
+	String dstFile="d://src2.bmp";
+	unZipFile(zipFile, dstFile);
+	System.out.println("解压成功");
+	
+	/*
+	
 	String content="i like like like java do you like a java";
 	byte[] contentBytes=content.getBytes();
 	System.out.println(contentBytes.length);//40
@@ -51,6 +99,8 @@ public class HuffmanCode {
 	//System.out.println(byteToBitString((byte)1));
 	byte[] sourceBytes=decode(huffmanCodes, huffmanCodeBytes);
 	System.out.println("原来的字符串="+new String(sourceBytes));//"i like like like java do you like a java"
+	
+	*/
 	
 	//如何将数据进行解压（解码）
 	
@@ -79,6 +129,113 @@ public class HuffmanCode {
 	//发送huffmanCodeBytes数组
 	 
 	*/
+    }
+    
+    //编写一个方法，完成对压缩文件的解压
+    /**
+     * 
+     * @param zipFile 准备解压的文件
+     * @param dstFile 将文件解压到哪个路径
+     */
+    public static void unZipFile(String zipFile, String dstFile) {
+	//定义文件输入流
+	InputStream is=null;
+	
+	//定义一个对象输入流
+	ObjectInputStream ois=null;
+	
+	//定义文件的输出流
+	OutputStream os=null;
+	
+	try {
+	    //创建文件输入流
+	    is=new FileInputStream(zipFile);
+	    
+	    //创建一个和is关联的对象输入流
+	    ois=new ObjectInputStream(is);
+	    
+	    //读取byte数组 huffmanBytes
+	    byte[] huffmanBytes=(byte[])ois.readObject();
+	    
+	    //读取赫夫曼编码表
+	    Map<Byte, String> huffmanCodes=(Map<Byte, String>)ois.readObject();
+	    
+	    //解码
+	    byte[] bytes=decode(huffmanCodes, huffmanBytes);
+	    
+	    //将bytes数组写入到目标文件
+	    os=new FileOutputStream(dstFile);
+	    
+	    //写数据到dstFile文件中
+	    os.write(bytes);
+	} catch (Exception e) {
+	    // TODO: handle exception
+	    System.out.println(e.getMessage());
+	} finally {
+	    try {
+		os.close();
+		    ois.close();
+		is.close();
+	    } catch (Exception e) {
+		// TODO 自动生成的 catch 块
+		System.out.println(e.getMessage());
+	    }
+	}
+    }
+    
+    //编写方法，将一个文件进行压缩
+    /**
+     * 
+     * @param srcFile 你传入的希望压缩的文件的绝对路径
+     * @param dstFile 我们压缩后经压缩文件放到哪个目录
+     * @throws FileNotFoundException 
+     */
+    public static void zipFile(String srcFile, String dstFile) {
+	//创建输出流
+	OutputStream os=null;
+	ObjectOutputStream oos=null;
+	
+	//创建文件的输入流
+	FileInputStream is=null;
+	
+	try {
+	    //创建文件的输入流
+	    is=new FileInputStream(srcFile);
+	    
+	    //创建一个和源文件大小一样的byte[]
+	    byte[] b=new byte[is.available()];
+	    
+	    //读取文件
+	    is.read(b);
+	    
+	    //直接对源文件压缩
+	    byte[] huffmanBytes=huffmanZip(b);
+	    
+	    //创建文件的输出流，存放压缩文件
+	    os=new FileOutputStream(dstFile);
+	    
+	    //创建一个和文件输出流关联的ObjectOutPutStream
+	    oos=new ObjectOutputStream(os);
+	    
+	    //把赫夫曼编码后的字节数组写入压缩文件
+	    oos.writeObject(huffmanBytes);//我们是把
+	    
+	    //这里我们以对象流的方式写入 赫夫曼编码，是为了以后我们恢复源文件时使用
+	    //注意一定要把赫夫曼编码写入压缩文件
+	    oos.writeObject(huffmanCodes);
+	} catch (Exception e) {
+	    // TODO 自动生成的 catch 块
+	    System.out.println(e.getMessage());
+	}finally {
+	    try {
+		is.close();
+		oos.close();
+		os.close();
+	    } catch (Exception e) {
+		// TODO 自动生成的 catch 块
+		System.out.println(e.getMessage());
+	    }
+	}
     }
     
     //完成数据的解压
